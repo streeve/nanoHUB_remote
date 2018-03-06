@@ -87,3 +87,20 @@ def get_results(session_id, headers):
     result_json = do_get(url, 'tools/output', result_data, headers)
     return result_json['output']
 
+def try_get_results(session_id, headers):
+    """IF tool session is finished, return the run XML"""
+    status_data = {'session_num': session_id}
+    time.sleep(sleep_time)  # let the DB update
+    status_json = do_get(url, 'tools/status', status_data, headers)
+
+    if status_json['finished']:
+        time.sleep(sleep_time)  # let the DB update
+        result_data = {
+            'session_num': session_id,
+            'run_file': status_json['run_file']
+        }
+        result_json = do_get(url, 'tools/output', result_data, headers)
+        return result_json['output']
+    else: 
+        print("Run not finished!")
+        return 

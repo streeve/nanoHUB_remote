@@ -61,24 +61,40 @@ def extract_results(run_xml, outputs):
     outputs, (x,y) tuples of numpy arrays for <curve> outputs, and strings
     for all other output types.
     """
+    
+    if run_xml is None:
+        print("Run still not done! (see above)")
+        return
+        
     d = {}
     xml = et.fromstring(run_xml)  # <run>
-    for el in xml.find('output'):
-        lel = el.find('./about/label')
-        if lel is not None and lel.text in outputs:
-            cel = el.find('current')
-            val = cel.text
-            if el.tag == 'number':
-                val = float(val)
-            elif el.tag == 'curve':
-                lines = val.split('\n')
-                n = len(lines)
-                x = np.zeros(n)
-                y = np.zeros(n)
-                for i in range(n):
-                    words = lines[i].split()
-                    x[i] = float(words[0])
-                    y[i] = float(words[1])
-                val = (x,y)
-            d[lel.text] = val
+
+    xml_output = xml.find('output')
+    curve = xml_output.findall('.//curve')
+    num = xml_output.findall('.//number')
+    num.append(xml_output.findall('.//text'))
+
+    for n in num:
+        val = n.findall('.//current')[0].text
+        label = n.findall('.//label')[0].text
+        if label in outputs:
+            d[label] = val
+
+    for ind, c in enumerate(curve): 
+        xy = c.findall('.//xy')[0].text
+
+        lines = xy.split('\n')
+        n = len(lines)
+        x = np.zeros([n])
+        y = np.zeros([n])
+        for i in range(n):
+            words = lines[i].split()
+            x[i] = float(words[0])
+            y[i] = float(words[1])
+        val = (x,y)
+
+        cgroup = c.find('./about/group')
+        if cgroup in outputs:
+            d[cgroup] = val
+
     return d
