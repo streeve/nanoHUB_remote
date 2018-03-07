@@ -104,27 +104,33 @@ def extract_results(run_xml, outputs):
 
     ### Loop over curve outputs, including grouped curves
     for ind, c in enumerate(curve):
-        xy = c.findall('.//xy')[0].text
-        
-        lines = xy.split('\n')
-        n = len(lines)
-        val = np.zeros([n,2])
-        for i in range(n):
-            words = lines[i].split()
-            val[i,:] = map(float, words)
 
         ### Curves can be separate or grouped
-        ### If grouped, add each to the output dict as "group_curve"
-        ### If separate, add as "curve"
         cgroup = c.find('./about/group')
         clabel = c.find('./about/label')
 
-        ### If the group/label exists, save if all results were 
+        ### If the group/label exists, save if all results were
         ###    requested or if this was specifically requested
         if cgroup is not None and (return_all or cgroup.text in outputs):
             name = "{}: {}".format(cgroup.text, clabel.text)
-            results[name] = val
+            parse = True
         elif clabel is not None and (return_all or clabel.text in outputs):
-            results[clabel.text] = val
+            name = clabel.text
+            parse = True
+        else: 
+            parse = False
+            
+        if parse:
+            xy = c.findall('.//xy')[0].text
 
+            lines = xy.split('\n')
+            n = len(lines)
+            val = np.zeros([n,2])
+            for i in range(n):
+                words = lines[i].split()
+                if words:
+                    val[i,:] = map(float, words)
+
+            results[name] = val
+            
     return results
