@@ -26,7 +26,7 @@ THE SOFTWARE.
 HUBzero is a registered trademark of Purdue University.
 """
 
-from api import authenticate, launch_tool, get_results, try_get_results
+from api import authenticate, launch_tool, get_results, try_get_results, save_id
 from hubxml import get_driver, extract_results
 
 __version__ = '0.1.0'

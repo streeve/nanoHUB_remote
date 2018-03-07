@@ -71,8 +71,14 @@ def launch_tool(driver_json, headers):
     run_json = do_post(url, 'tools/run', driver_json, headers)
     return run_json['session']
 
+def save_id(tool_name, s_id):
+    """Save tool session ID to file"""
+    with open('sessions.txt', 'a') as f:
+        f.write('{}\t{}\t{}\n'.format(tool_name, s_id, time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())))
+    return
+                                      
 def get_results(session_id, headers):
-    """Wait for the tool session to finish; return the run XML"""
+    """Block & wait for the tool session to finish; return the run XML"""
     status_data = {'session_num': session_id}
     while True:
         time.sleep(sleep_time)

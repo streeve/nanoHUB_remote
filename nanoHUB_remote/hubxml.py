@@ -56,45 +56,75 @@ def get_driver(tool_name, inputs, headers):
 
 def extract_results(run_xml, outputs):
     """
-    Parse run_xml to extract the specified output; return a dict with the 
-    output label as a key.  The returned values will be floats for <number> 
-    outputs, (x,y) tuples of numpy arrays for <curve> outputs, and strings
+    Parse run_xml to extract the specified output; return a dict with the
+    output label as a key.  The returned values will be floats for <number>
+    outputs, 2D numpy arrays for <curve> outputs, and strings      
     for all other output types.
     """
-    
-    if run_xml is None:
-        print("Run still not done! (see above)")
-        return
-        
-    d = {}
-    xml = et.fromstring(run_xml)  # <run>
 
+    if run_xml is None:
+        print("Run not done OR results not extracted (check above!)")
+        return
+    
+    ### For empty list, return all curve, number, text outputs
+    return_all = False
+    if not outputs:
+        return_all = True
+
+    results = {}
+    ### Parse XML output results
+    xml = et.fromstring(run_xml)
     xml_output = xml.find('output')
+    ### Extract only these results (so far)
     curve = xml_output.findall('.//curve')
     num = xml_output.findall('.//number')
-    num.append(xml_output.findall('.//text'))
+    log = xml_output.findall('.//log')
 
+    ### Loop over number output
+    ### Assume value in "current"
+    ### Return raw string if float conversion fails
     for n in num:
         val = n.findall('.//current')[0].text
         label = n.findall('.//label')[0].text
-        if label in outputs:
-            d[label] = val
+        if return_all or label in outputs:
+            try:
+                results[label] = float(val)
+            except:
+                results[label] = val
+    
+    ### Loop over text output, checking all XML
+    ### Cases so far: "tail" of "about" contains text
+    ### Could use for this style for all types
+    for l in log: 
+        label = l.findall('.//label')[0].text
+        if return_all or label in outputs:        
+            for text in l.itertext():
+                if not text.isspace() and text != label:
+                    results[label] = text
 
-    for ind, c in enumerate(curve): 
+    ### Loop over curve outputs, including grouped curves
+    for ind, c in enumerate(curve):
         xy = c.findall('.//xy')[0].text
-
+        
         lines = xy.split('\n')
         n = len(lines)
-        x = np.zeros([n])
-        y = np.zeros([n])
+        val = np.zeros([n,2])
         for i in range(n):
             words = lines[i].split()
-            x[i] = float(words[0])
-            y[i] = float(words[1])
-        val = (x,y)
+            val[i,:] = map(float, words)
 
+        ### Curves can be separate or grouped
+        ### If grouped, add each to the output dict as "group_curve"
+        ### If separate, add as "curve"
         cgroup = c.find('./about/group')
-        if cgroup in outputs:
-            d[cgroup] = val
+        clabel = c.find('./about/label')
 
-    return d
+        ### If the group/label exists, save if all results were 
+        ###    requested or if this was specifically requested
+        if cgroup is not None and (return_all or cgroup.text in outputs):
+            name = "{}: {}".format(cgroup.text, clabel.text)
+            results[name] = val
+        elif clabel is not None and (return_all or clabel.text in outputs):
+            results[clabel.text] = val
+
+    return results
